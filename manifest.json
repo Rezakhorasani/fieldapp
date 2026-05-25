@@ -1,0 +1,12 @@
+{
+  "name": "FieldApp — Field Data Collection",
+  "short_name": "FieldApp",
+  "description": "Field data collection: photo, video, time-lapse with GPS and sensor logging.",
+  "start_url": "/fieldapp/",
+  "scope": "/fieldapp/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0d0f0e",
+  "theme_color": "#0d0f0e",
+  "icons": []
+}

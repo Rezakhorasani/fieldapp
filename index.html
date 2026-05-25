@@ -1,0 +1,2331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <meta name="apple-mobile-web-app-title" content="FieldApp"/>
+  <meta name="theme-color" content="#0d0f0e"/>
+  <link rel="manifest" href="/fieldapp/manifest.json"/>
+  <!-- apple-touch-icon omitted: add icons/icon-192.png to repo to enable -->
+  <title>FieldApp</title>
+  <style>
+    /* ═══════════════════════════════════════════════════════════════
+       DESIGN SYSTEM — Industrial / Field Equipment aesthetic
+       Deep charcoal base · Amber primary · Green status · Mono data
+    ═══════════════════════════════════════════════════════════════ */
+    /* Fonts: system stack — works fully offline in the field */
+/* Share Tech Mono fallback: Courier New / monospace */
+/* Barlow Condensed fallback: Impact / Arial Narrow / sans-serif */
+
+    :root {
+      --bg:         #0d0f0e;
+      --bg2:        #151917;
+      --bg3:        #1c201e;
+      --bg4:        #222926;
+      --border:     #2a3330;
+      --border2:    #364340;
+      --amber:      #f5a623;
+      --amber-dim:  #7a5210;
+      --amber-glow: rgba(245,166,35,.15);
+      --green:      #39d353;
+      --green-dim:  #1a4f23;
+      --green-glow: rgba(57,211,83,.12);
+      --red:        #ff4545;
+      --red-dim:    #5c1a1a;
+      --red-glow:   rgba(255,69,69,.15);
+      --blue:       #4da6ff;
+      --text:       #d4dbd6;
+      --text-dim:   #5a706a;
+      --text-mid:   #8fa89f;
+      --mono:       'Courier New', 'Courier', monospace;
+      --display:    'Arial Narrow', 'Impact', Arial, sans-serif;
+      --body:       -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+      --safe-top:    env(safe-area-inset-top,    0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-left:   env(safe-area-inset-left,   0px);
+      --safe-right:  env(safe-area-inset-right,  0px);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%; width: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--body);
+      -webkit-font-smoothing: antialiased;
+      overflow: hidden;
+      overscroll-behavior: none;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+
+    /* ── Scanline texture overlay ─────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 9999;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,.06) 2px,
+        rgba(0,0,0,.06) 4px
+      );
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SCREEN SYSTEM
+    ═══════════════════════════════════════════════════════════════ */
+    .screen {
+      position: fixed; inset: 0;
+      display: none;
+      flex-direction: column;
+      padding-top: var(--safe-top);
+      padding-bottom: var(--safe-bottom);
+      padding-left: var(--safe-left);
+      padding-right: var(--safe-right);
+      overflow: hidden;
+    }
+    .screen.active { display: flex; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SHARED COMPONENTS
+    ═══════════════════════════════════════════════════════════════ */
+
+    /* ── Top bar ──────────────────────────────────────────────────── */
+    .topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 16px 8px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg2);
+      flex-shrink: 0;
+    }
+    .topbar-title {
+      font-family: var(--display);
+      font-size: 20px; font-weight: 900;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--amber);
+    }
+    .topbar-sub {
+      font-family: var(--mono);
+      font-size: 11px; color: var(--text-dim);
+      letter-spacing: 1px; text-transform: uppercase;
+      margin-left: auto;
+    }
+    .back-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--amber); padding: 4px; font-size: 20px;
+      display: flex; align-items: center;
+    }
+
+    /* ── Status pill ──────────────────────────────────────────────── */
+    .pill {
+      font-family: var(--mono); font-size: 11px;
+      padding: 3px 10px; border-radius: 2px;
+      letter-spacing: 1px; text-transform: uppercase;
+      border: 1px solid;
+    }
+    .pill.ok     { color: var(--green); border-color: var(--green-dim); background: var(--green-glow); }
+    .pill.warn   { color: var(--amber); border-color: var(--amber-dim); background: var(--amber-glow); }
+    .pill.error  { color: var(--red);   border-color: var(--red-dim);   background: var(--red-glow);   }
+    .pill.dim    { color: var(--text-dim); border-color: var(--border);  background: transparent; }
+
+    /* ── Buttons ──────────────────────────────────────────────────── */
+    .btn {
+      font-family: var(--display);
+      font-size: 16px; font-weight: 700;
+      letter-spacing: 1.5px; text-transform: uppercase;
+      border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 14px 20px; border-radius: 3px;
+      transition: opacity .1s, transform .1s;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 52px;
+    }
+    .btn:active { opacity: .75; transform: scale(.97); }
+    .btn:disabled { opacity: .3; pointer-events: none; }
+    .btn.amber  { background: var(--amber);     color: #0d0f0e; }
+    .btn.green  { background: var(--green);     color: #0d0f0e; }
+    .btn.red    { background: var(--red);       color: #fff; }
+    .btn.ghost  { background: transparent; color: var(--amber); border: 1.5px solid var(--amber-dim); }
+    .btn.ghost-red { background: transparent; color: var(--red); border: 1.5px solid var(--red-dim); }
+    .btn.muted  { background: var(--bg3); color: var(--text-mid); border: 1px solid var(--border); }
+
+    /* ── Data readout ─────────────────────────────────────────────── */
+    .readout {
+      font-family: var(--mono);
+      font-size: 13px; color: var(--text-mid);
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 10px 12px;
+      line-height: 1.8;
+    }
+    .readout .key  { color: var(--text-dim); }
+    .readout .val  { color: var(--amber); }
+    .readout .val.green { color: var(--green); }
+    .readout .val.red   { color: var(--red); }
+
+    /* ── Section label ────────────────────────────────────────────── */
+    .section-label {
+      font-family: var(--display);
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 3px; text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 12px 16px 6px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    /* ── Divider ──────────────────────────────────────────────────── */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+    /* ── Scrollable content ───────────────────────────────────────── */
+    .scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SCREEN 1: HOME / DASHBOARD
+    ═══════════════════════════════════════════════════════════════ */
+    #screen-home .hero {
+      padding: 24px 16px 16px;
+      flex-shrink: 0;
+    }
+    #screen-home .hero-logo {
+      font-family: var(--display);
+      font-size: 52px; font-weight: 900;
+      letter-spacing: 4px; text-transform: uppercase;
+      color: var(--amber);
+      line-height: 1;
+      text-shadow: 0 0 40px rgba(245,166,35,.3);
+    }
+    #screen-home .hero-sub {
+      font-family: var(--mono);
+      font-size: 12px; color: var(--text-dim);
+      letter-spacing: 2px; text-transform: uppercase;
+      margin-top: 4px;
+    }
+    #screen-home .sys-status {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; padding: 16px;
+      flex-shrink: 0;
+    }
+    .sys-tile {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 10px 12px;
+    }
+    .sys-tile .tile-icon { font-size: 18px; }
+    .sys-tile .tile-name {
+      font-family: var(--display);
+      font-size: 12px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: var(--text-dim); margin-top: 4px;
+    }
+    .sys-tile .tile-val {
+      font-family: var(--mono);
+      font-size: 13px; color: var(--amber);
+      margin-top: 2px;
+    }
+    .sys-tile .tile-val.ok { color: var(--green); }
+    .sys-tile .tile-val.err { color: var(--red); }
+
+    #screen-home .home-actions {
+      padding: 0 16px 16px;
+      display: flex; flex-direction: column; gap: 10px;
+      flex-shrink: 0;
+    }
+    #screen-home .sessions-list {
+      padding: 0 16px 16px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .session-row {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 12px 14px;
+      display: flex; align-items: center; gap: 12px;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    .session-row:active { border-color: var(--amber); }
+    .session-row .sr-icon { font-size: 22px; flex-shrink: 0; }
+    .session-row .sr-info { flex: 1; min-width: 0; }
+    .session-row .sr-name {
+      font-family: var(--display);
+      font-size: 15px; font-weight: 700;
+      letter-spacing: .5px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .session-row .sr-meta {
+      font-family: var(--mono);
+      font-size: 11px; color: var(--text-dim); margin-top: 2px;
+    }
+    .session-row .sr-arrow { color: var(--text-dim); font-size: 16px; }
+    .no-sessions {
+      text-align: center;
+      font-family: var(--mono); font-size: 12px;
+      color: var(--text-dim); padding: 24px 0;
+      letter-spacing: 1px;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SCREEN 2: SESSION SETUP
+    ═══════════════════════════════════════════════════════════════ */
+    #screen-setup .setup-form {
+      padding: 16px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .field-group label {
+      display: block;
+      font-family: var(--display);
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--text-dim); margin-bottom: 6px;
+    }
+    .field-group input, .field-group select {
+      width: 100%;
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 3px;
+      color: var(--text);
+      font-family: var(--mono); font-size: 14px;
+      padding: 12px 14px;
+      outline: none;
+      -webkit-appearance: none;
+      appearance: none;
+    }
+    .field-group input:focus, .field-group select:focus {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 2px var(--amber-glow);
+    }
+    .field-group select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M0 0l6 8 6-8z' fill='%235a706a'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+    }
+    .mode-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 8px;
+    }
+    .mode-card {
+      background: var(--bg3);
+      border: 2px solid var(--border);
+      border-radius: 3px;
+      padding: 12px 8px;
+      text-align: center; cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .mode-card.selected {
+      border-color: var(--amber);
+      background: var(--amber-glow);
+    }
+    .mode-card .mc-icon { font-size: 24px; }
+    .mode-card .mc-label {
+      font-family: var(--display);
+      font-size: 12px; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: var(--text-mid); margin-top: 4px;
+    }
+    .mode-card.selected .mc-label { color: var(--amber); }
+    #timelapse-options {
+      background: var(--bg3);
+      border: 1px solid var(--border2);
+      border-radius: 3px;
+      padding: 12px 14px;
+      display: none;
+    }
+    #timelapse-options.visible { display: block; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SCREEN 3: ACTIVE SESSION
+    ═══════════════════════════════════════════════════════════════ */
+    #screen-session {
+      background: #000;
+      position: relative;
+    }
+    #camera-video {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+    .session-overlay {
+      position: absolute; inset: 0; z-index: 10;
+      display: flex; flex-direction: column;
+      padding-top: var(--safe-top);
+      padding-bottom: var(--safe-bottom);
+      pointer-events: none;
+    }
+    .session-overlay > * { pointer-events: auto; }
+
+    /* ── HUD top bar ──────────────────────────────────────────────── */
+    .hud-top {
+      display: flex; align-items: flex-start;
+      padding: 10px 14px;
+      background: linear-gradient(to bottom, rgba(0,0,0,.8), transparent);
+      gap: 8px; flex-wrap: wrap;
+    }
+    .hud-badge {
+      font-family: var(--mono);
+      font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+      padding: 4px 10px; border-radius: 2px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .hud-badge.rec {
+      background: rgba(255,69,69,.25);
+      border: 1px solid var(--red);
+      color: var(--red);
+    }
+    .hud-badge.rec .rec-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--red);
+      animation: blink 1s step-start infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    .hud-badge.gps {
+      background: rgba(77,166,255,.15);
+      border: 1px solid rgba(77,166,255,.4);
+      color: var(--blue);
+    }
+    .hud-badge.timer {
+      background: rgba(0,0,0,.5);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      margin-left: auto;
+    }
+
+    /* ── HUD sensor strip ─────────────────────────────────────────── */
+    .hud-sensors {
+      padding: 8px 14px;
+      display: grid; grid-template-columns: repeat(3,1fr);
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .sensor-tile {
+      background: rgba(0,0,0,.65);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 2px;
+      padding: 6px 8px;
+      text-align: center;
+    }
+    .sensor-tile .st-label {
+      font-family: var(--display);
+      font-size: 9px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .sensor-tile .st-val {
+      font-family: var(--mono);
+      font-size: 14px; color: var(--green);
+      margin-top: 1px;
+    }
+
+    /* ── HUD spacer ───────────────────────────────────────────────── */
+    .hud-spacer { flex: 1; }
+
+    /* ── HUD bottom controls ──────────────────────────────────────── */
+    .hud-bottom {
+      padding: 12px 14px 16px;
+      background: linear-gradient(to top, rgba(0,0,0,.85), transparent);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .capture-btn {
+      width: 72px; height: 72px; border-radius: 50%;
+      border: 3px solid #fff;
+      background: rgba(255,255,255,.15);
+      backdrop-filter: blur(4px);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+      transition: transform .1s, background .1s;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+      margin: 0 auto;
+    }
+    .capture-btn:active { transform: scale(.9); background: rgba(255,255,255,.3); }
+    .capture-btn.recording {
+      border-color: var(--red);
+      background: rgba(255,69,69,.2);
+    }
+    .capture-btn.recording::after {
+      content: '';
+      position: absolute;
+      width: 80px; height: 80px; border-radius: 50%;
+      border: 2px solid var(--red);
+      animation: ripple 1.5s linear infinite;
+      opacity: .5;
+    }
+    @keyframes ripple {
+      0%   { transform: scale(1); opacity: .5; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+    .side-btn {
+      width: 48px; height: 48px; border-radius: 50%;
+      background: rgba(0,0,0,.5);
+      border: 1px solid rgba(255,255,255,.15);
+      color: #fff; font-size: 20px;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .side-btn:active { background: rgba(255,255,255,.2); }
+    .hud-photo-count {
+      font-family: var(--mono); font-size: 11px;
+      color: rgba(255,255,255,.6); text-align: center;
+      letter-spacing: 1px;
+    }
+
+    /* ── GPS coords overlay ───────────────────────────────────────── */
+    .hud-gps-detail {
+      padding: 4px 14px 0;
+      font-family: var(--mono); font-size: 11px;
+      color: rgba(77,166,255,.7);
+      letter-spacing: .5px;
+    }
+
+    /* ── Timelapse progress ───────────────────────────────────────── */
+    .tl-progress {
+      margin: 0 14px 8px;
+      background: rgba(0,0,0,.5);
+      border: 1px solid var(--amber-dim);
+      border-radius: 2px;
+      padding: 8px 12px;
+      display: none;
+    }
+    .tl-progress.visible { display: block; }
+    .tl-bar-bg {
+      height: 4px; background: var(--bg3); border-radius: 2px; margin-top: 6px;
+    }
+    .tl-bar-fill {
+      height: 100%; background: var(--amber); border-radius: 2px;
+      transition: width .3s linear;
+    }
+    .tl-label {
+      font-family: var(--mono); font-size: 11px;
+      color: var(--amber); letter-spacing: 1px;
+      display: flex; justify-content: space-between;
+    }
+
+    /* ── Flash effect ─────────────────────────────────────────────── */
+    #flash {
+      position: fixed; inset: 0; z-index: 1000;
+      background: #fff; opacity: 0; pointer-events: none;
+      transition: opacity .05s;
+    }
+    #flash.show { opacity: 1; }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SCREEN 4: SESSION REVIEW
+    ═══════════════════════════════════════════════════════════════ */
+    #screen-review .review-hero {
+      padding: 20px 16px 12px;
+      text-align: center; flex-shrink: 0;
+    }
+    #screen-review .review-icon { font-size: 48px; }
+    #screen-review .review-name {
+      font-family: var(--display);
+      font-size: 24px; font-weight: 900;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--amber); margin-top: 8px;
+    }
+    #screen-review .review-date {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--text-dim); margin-top: 4px;
+    }
+    .stat-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 8px; padding: 0 16px 16px;
+    }
+    .stat-tile {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 3px; padding: 12px;
+    }
+    .stat-tile .st-n {
+      font-family: var(--display);
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 2px; text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .stat-tile .st-v {
+      font-family: var(--mono);
+      font-size: 22px; color: var(--amber);
+      margin-top: 4px;
+    }
+    .export-list { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 8px; }
+    .export-row {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 3px; padding: 14px;
+      display: flex; align-items: center; gap: 12px;
+      cursor: pointer; transition: border-color .15s;
+    }
+    .export-row:active { border-color: var(--amber); }
+    .export-row .er-icon { font-size: 24px; flex-shrink: 0; }
+    .export-row .er-info { flex: 1; }
+    .export-row .er-title {
+      font-family: var(--display);
+      font-size: 14px; font-weight: 700; letter-spacing: .5px;
+    }
+    .export-row .er-sub {
+      font-family: var(--mono); font-size: 11px;
+      color: var(--text-dim); margin-top: 2px;
+    }
+    .export-row .er-arrow { color: var(--amber); font-size: 16px; }
+
+    /* ── Sensor log mini viewer ───────────────────────────────────── */
+    .log-viewer {
+      margin: 0 16px 16px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 3px;
+      max-height: 160px; overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .log-viewer table {
+      width: 100%; border-collapse: collapse;
+      font-family: var(--mono); font-size: 11px;
+    }
+    .log-viewer th {
+      background: var(--bg3); color: var(--text-dim);
+      padding: 6px 8px; text-align: left;
+      position: sticky; top: 0;
+      font-weight: normal; letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .log-viewer td {
+      padding: 5px 8px; color: var(--text-mid);
+      border-top: 1px solid var(--border);
+    }
+    .log-viewer td.val { color: var(--green); }
+
+    /* ═══════════════════════════════════════════════════════════════
+       SCREEN 5: SETTINGS
+    ═══════════════════════════════════════════════════════════════ */
+    .settings-list { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 1px; }
+    .setting-row {
+      background: var(--bg2); border: 1px solid var(--border);
+      padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .setting-row:first-child { border-radius: 3px 3px 0 0; }
+    .setting-row:last-child  { border-radius: 0 0 3px 3px; }
+    .setting-row + .setting-row { border-top: none; }
+    .setting-row .sr-label {
+      font-family: var(--display); font-size: 14px;
+      font-weight: 600; letter-spacing: .5px;
+      flex: 1;
+    }
+    .setting-row .sr-val {
+      font-family: var(--mono); font-size: 12px;
+      color: var(--amber);
+    }
+    .toggle {
+      width: 44px; height: 26px; border-radius: 13px;
+      background: var(--bg4); border: 1px solid var(--border2);
+      position: relative; cursor: pointer; flex-shrink: 0;
+      transition: background .2s;
+    }
+    .toggle.on { background: var(--amber); border-color: var(--amber); }
+    .toggle::after {
+      content: '';
+      position: absolute; top: 3px; left: 3px;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--text-dim); transition: transform .2s, background .2s;
+    }
+    .toggle.on::after { transform: translateX(18px); background: #0d0f0e; }
+
+
+    /* ── Annotation quick-buttons ──────────────────────────────────── */
+    .annot-quick {
+      background: rgba(245,166,35,.12);
+      border: 1px solid rgba(245,166,35,.3);
+      border-radius: 20px;
+      color: var(--amber);
+      font-family: var(--mono); font-size: 11px;
+      padding: 6px 12px; white-space: nowrap;
+      cursor: pointer; flex-shrink: 0;
+      letter-spacing: .5px;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .annot-quick:active { background: rgba(245,166,35,.25); }
+    /* ── Toast ────────────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: calc(var(--safe-bottom) + 80px);
+      left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--bg3); border: 1px solid var(--border2);
+      color: var(--text); font-family: var(--mono); font-size: 13px;
+      padding: 10px 20px; border-radius: 3px;
+      opacity: 0; transition: opacity .25s, transform .25s;
+      pointer-events: none; z-index: 9998; white-space: nowrap;
+      letter-spacing: .5px;
+    }
+    #toast.show {
+      opacity: 1; transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Permission wall ──────────────────────────────────────────── */
+    #perm-wall {
+      position: fixed; inset: 0; z-index: 500;
+      background: var(--bg);
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 32px;
+      text-align: center; gap: 16px;
+    }
+    #perm-wall.visible { display: flex; }
+    #perm-wall .pw-icon { font-size: 56px; }
+    #perm-wall h2 {
+      font-family: var(--display); font-size: 26px;
+      font-weight: 900; letter-spacing: 2px; text-transform: uppercase;
+      color: var(--amber);
+    }
+    #perm-wall p {
+      font-size: 15px; color: var(--text-mid);
+      max-width: 340px; line-height: 1.6;
+    }
+    #perm-wall .perm-list {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 3px; width: 100%; max-width: 340px;
+      overflow: hidden;
+    }
+    #perm-wall .perm-item {
+      padding: 12px 16px;
+      display: flex; align-items: center; gap: 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+    #perm-wall .perm-item:last-child { border-bottom: none; }
+    #perm-wall .perm-item .pi-status {
+      font-family: var(--mono); font-size: 11px;
+      margin-left: auto; color: var(--amber);
+    }
+    #perm-wall .perm-item .pi-status.ok { color: var(--green); }
+  </style>
+</head>
+<body>
+
+<!-- Flash effect for photo capture -->
+<div id="flash"></div>
+
+<!-- Toast notification -->
+<div id="toast"></div>
+
+<!-- Permission wall -->
+<div id="perm-wall">
+  <div class="pw-icon">🔒</div>
+  <h2>Permissions Required</h2>
+  <p>FieldApp needs access to the following to collect field data. Grant each permission when prompted.</p>
+  <div class="perm-list">
+    <div class="perm-item">📷 Camera <span class="pi-status" id="ps-camera">Pending</span></div>
+    <div class="perm-item">📍 Location <span class="pi-status" id="ps-location">Pending</span></div>
+    <div class="pi-status" id="ps-motion" style="display:none"></div>
+  </div>
+  <button class="btn amber" onclick="requestPermissions()" style="width:100%;max-width:340px">
+    Grant Permissions
+  </button>
+  <p style="font-size:12px;color:var(--text-dim)">
+    If a permission was denied, go to <strong>Settings → Safari → Camera / Location</strong> and allow access.
+  </p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SCREEN 1: HOME
+════════════════════════════════════════════════════════════════ -->
+<div id="screen-home" class="screen active">
+  <div class="topbar">
+    <span class="topbar-title">⬡ FieldApp</span>
+    <span class="topbar-sub" id="home-datetime">--:--</span>
+    <button class="back-btn" onclick="showScreen('screen-settings')" style="margin-left:8px">⚙</button>
+  </div>
+
+  <div class="scroll">
+    <div class="hero">
+      <div class="hero-logo">FIELD</div>
+      <div class="hero-sub">Data Collection System · v1.0</div>
+    </div>
+
+    <!-- HTTPS warning banner (shown only on file://) -->
+    <div id="https-banner" style="
+        display:none;
+        margin:0 16px 8px;
+        background:rgba(245,166,35,.1);
+        border:1px solid rgba(245,166,35,.4);
+        border-radius:4px;
+        padding:10px 14px;
+        font-size:13px;
+        color:#f5a623;
+        line-height:1.6;">
+      ⚠️ <strong>Camera &amp; sensors need HTTPS.</strong>
+      Deploy to <strong>netlify.com/drop</strong> or GitHub Pages for full functionality.
+    </div>
+
+    <!-- System status tiles -->
+    <div class="sys-status">
+      <div class="sys-tile">
+        <div class="tile-icon">📍</div>
+        <div class="tile-name">GPS</div>
+        <div class="tile-val" id="home-gps-status">Checking…</div>
+      </div>
+      <div class="sys-tile">
+        <div class="tile-icon">📷</div>
+        <div class="tile-name">Camera</div>
+        <div class="tile-val" id="home-cam-status">Checking…</div>
+      </div>
+      <div class="sys-tile">
+        <div class="tile-icon">📡</div>
+        <div class="tile-name">Motion</div>
+        <div class="tile-val" id="home-motion-status">—</div>
+      </div>
+      <div class="sys-tile">
+        <div class="tile-icon">💾</div>
+        <div class="tile-name">Sessions</div>
+        <div class="tile-val ok" id="home-session-count">0 saved</div>
+      </div>
+    </div>
+
+    <!-- Primary action -->
+    <div class="home-actions">
+      <button class="btn amber" onclick="showScreen('screen-setup')">
+        ＋ New Session
+      </button>
+    </div>
+
+    <!-- Past sessions -->
+    <div class="section-label">Recent Sessions</div>
+    <div class="sessions-list" id="sessions-list">
+      <div class="no-sessions">[ No sessions recorded yet ]</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SCREEN 2: SESSION SETUP
+════════════════════════════════════════════════════════════════ -->
+<div id="screen-setup" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="showScreen('screen-home')">◀</button>
+    <span class="topbar-title">New Session</span>
+  </div>
+
+  <div class="scroll">
+    <div class="setup-form">
+
+      <div class="field-group">
+        <label>Session Name</label>
+        <input type="text" id="setup-name" placeholder="e.g. Site Alpha — North Face"
+               value="" autocomplete="off" autocorrect="off" spellcheck="false"/>
+      </div>
+
+      <div class="field-group">
+        <label>Capture Mode</label>
+        <div class="mode-grid">
+          <div class="mode-card selected" data-mode="photo" onclick="selectMode('photo')">
+            <div class="mc-icon">📷</div>
+            <div class="mc-label">Photo</div>
+          </div>
+          <div class="mode-card" data-mode="video" onclick="selectMode('video')">
+            <div class="mc-icon">📹</div>
+            <div class="mc-label">Video</div>
+          </div>
+          <div class="mode-card" data-mode="timelapse" onclick="selectMode('timelapse')">
+            <div class="mc-icon">⏱</div>
+            <div class="mc-label">Time-lapse</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="timelapse-options" class="field-group">
+        <label>Time-lapse Interval</label>
+        <select id="setup-interval">
+          <option value="2000">Every 2 seconds</option>
+          <option value="5000" selected>Every 5 seconds</option>
+          <option value="10000">Every 10 seconds</option>
+          <option value="30000">Every 30 seconds</option>
+          <option value="60000">Every 1 minute</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Sensor Sample Rate</label>
+        <select id="setup-rate">
+          <option value="100">10 Hz (recommended)</option>
+          <option value="200">5 Hz</option>
+          <option value="1000">1 Hz (battery saving)</option>
+        </select>
+      </div>
+
+      <div class="field-group">
+        <label>Notes</label>
+        <input type="text" id="setup-notes" placeholder="Optional field notes…"
+               autocomplete="off" autocorrect="on"/>
+      </div>
+
+      <button class="btn amber" onclick="startSession()" style="margin-top:8px">
+        ▶ Begin Collection
+      </button>
+      <button class="btn muted" onclick="showScreen('screen-home')">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SCREEN 3: ACTIVE SESSION
+════════════════════════════════════════════════════════════════ -->
+<div id="screen-session" class="screen">
+  <video id="camera-video" autoplay playsinline muted></video>
+
+  <div class="session-overlay">
+    <!-- HUD top -->
+    <div class="hud-top">
+      <span class="hud-badge rec" id="rec-badge" style="display:none">
+        <span class="rec-dot"></span>REC
+      </span>
+      <span class="hud-badge" id="mode-badge" style="background:rgba(0,0,0,.5);border:1px solid var(--border2)">
+        PHOTO
+      </span>
+      <span class="hud-badge gps" id="gps-badge">📍 Acquiring…</span>
+      <span class="hud-badge timer" id="session-timer">00:00</span>
+    </div>
+
+    <!-- GPS coords -->
+    <div class="hud-gps-detail" id="gps-detail">—</div>
+
+    <!-- Sensor strip -->
+    <div class="hud-sensors">
+      <div class="sensor-tile">
+        <div class="st-label">Ax</div>
+        <div class="st-val" id="s-ax">—</div>
+      </div>
+      <div class="sensor-tile">
+        <div class="st-label">Ay</div>
+        <div class="st-val" id="s-ay">—</div>
+      </div>
+      <div class="sensor-tile">
+        <div class="st-label">Az</div>
+        <div class="st-val" id="s-az">—</div>
+      </div>
+      <div class="sensor-tile">
+        <div class="st-label">Pitch</div>
+        <div class="st-val" id="s-pitch">—</div>
+      </div>
+      <div class="sensor-tile">
+        <div class="st-label">Roll</div>
+        <div class="st-val" id="s-roll">—</div>
+      </div>
+      <div class="sensor-tile">
+        <div class="st-label">Head</div>
+        <div class="st-val" id="s-head">—</div>
+      </div>
+    </div>
+    <div class="hud-sensors" style="padding-top:0">
+      <div class="sensor-tile">
+        <div class="st-label">GyrX</div>
+        <div class="st-val" id="s-gyrx">—</div>
+      </div>
+      <div class="sensor-tile">
+        <div class="st-label">GyrY</div>
+        <div class="st-val" id="s-gyry">—</div>
+      </div>
+      <div class="sensor-tile">
+        <div class="st-label">GyrZ</div>
+        <div class="st-val" id="s-gyrz">—</div>
+      </div>
+    </div>
+
+    <!-- Time-lapse progress bar -->
+    <div class="tl-progress" id="tl-progress">
+      <div class="tl-label">
+        <span>⏱ TIME-LAPSE</span>
+        <span id="tl-count">0 frames</span>
+      </div>
+      <div class="tl-bar-bg"><div class="tl-bar-fill" id="tl-bar" style="width:0%"></div></div>
+    </div>
+
+    <div class="hud-spacer"></div>
+
+    <!-- Annotation strip -->
+    <div id="annotation-strip" style="
+        padding: 0 14px 6px;
+        display:flex; gap:6px; overflow-x:auto;
+        -webkit-overflow-scrolling:touch; scrollbar-width:none;">
+      <button class="annot-quick" onclick="addAnnotation('Sample collected')">&#129514; Sample</button>
+      <button class="annot-quick" onclick="addAnnotation('Anomaly observed')">&#9888;&#65039; Anomaly</button>
+      <button class="annot-quick" onclick="addAnnotation('Waypoint marked')">&#128204; Waypoint</button>
+      <button class="annot-quick" onclick="promptAnnotation()">&#9998;&#65039; Custom&#8230;</button>
+    </div>
+    <div id="annot-log" style="
+        margin: 0 14px 4px; font-family:var(--mono); font-size:10px;
+        color:rgba(245,166,35,.7); line-height:1.6; display:none;
+        max-height:44px; overflow:hidden;"></div>
+
+        <!-- Bottom controls -->
+    <div class="hud-bottom">
+      <button class="side-btn" onclick="toggleCamera()">🔄</button>
+
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px">
+        <button class="capture-btn" id="capture-btn" onclick="handleCapture()">📷</button>
+        <div class="hud-photo-count" id="capture-count">0 captured</div>
+      </div>
+
+      <button class="side-btn" onclick="endSession()">⏹</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SCREEN 4: SESSION REVIEW
+════════════════════════════════════════════════════════════════ -->
+<div id="screen-review" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="showScreen('screen-home')">◀</button>
+    <span class="topbar-title">Session Review</span>
+  </div>
+
+  <div class="scroll">
+    <div class="review-hero">
+      <div class="review-icon">✅</div>
+      <div class="review-name" id="review-name">—</div>
+      <div class="review-date" id="review-date">—</div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-tile"><div class="st-n">Duration</div><div class="st-v" id="rv-duration">—</div></div>
+      <div class="stat-tile"><div class="st-n">Captures</div><div class="st-v" id="rv-captures">—</div></div>
+      <div class="stat-tile"><div class="st-n">GPS Points</div><div class="st-v" id="rv-gps">—</div></div>
+      <div class="stat-tile"><div class="st-n">Sensor Logs</div><div class="st-v" id="rv-sensors">—</div></div>
+    </div>
+
+    <div class="section-label">Export Data</div>
+    <div class="export-list">
+      <div class="export-row" onclick="exportJSON()">
+        <span class="er-icon">📄</span>
+        <div class="er-info">
+          <div class="er-title">Sensor Log — JSON</div>
+          <div class="er-sub">Full sensor readings with GPS · timestamped</div>
+        </div>
+        <span class="er-arrow">↓</span>
+      </div>
+      <div class="export-row" onclick="exportCSV()">
+        <span class="er-icon">📊</span>
+        <div class="er-info">
+          <div class="er-title">Sensor Log — CSV</div>
+          <div class="er-sub">Spreadsheet-compatible · Numbers / Excel</div>
+        </div>
+        <span class="er-arrow">↓</span>
+      </div>
+      <div class="export-row" onclick="exportGPSTrack()">
+        <span class="er-icon">🗺</span>
+        <div class="er-info">
+          <div class="er-title">GPS Track — GeoJSON</div>
+          <div class="er-sub">Import into Maps or GIS software</div>
+        </div>
+        <span class="er-arrow">↓</span>
+      </div>
+      <div class="export-row" onclick="exportAnnotations()">
+        <span class="er-icon">&#128221;</span>
+        <div class="er-info">
+          <div class="er-title">Annotations &mdash; CSV</div>
+          <div class="er-sub">Timestamped field observations &amp; markers</div>
+        </div>
+        <span class="er-arrow">&#8595;</span>
+      </div>
+      <div class="export-row" onclick="exportBundle()">
+        <span class="er-icon">&#128230;</span>
+        <div class="er-info">
+          <div class="er-title">Full Session Bundle &mdash; JSON</div>
+          <div class="er-sub">All data in one file &mdash; sensors, GPS, annotations, metadata</div>
+        </div>
+        <span class="er-arrow">&#8595;</span>
+      </div>
+      <div class="export-row" onclick="exportMetadata()">
+        <span class="er-icon">📋</span>
+        <div class="er-info">
+          <div class="er-title">Session Metadata — JSON</div>
+          <div class="er-sub">Device info, timestamps, settings</div>
+        </div>
+        <span class="er-arrow">↓</span>
+      </div>
+    </div>
+
+    <div class="section-label">Sensor Preview</div>
+    <div class="log-viewer">
+      <table>
+        <thead>
+          <tr>
+            <th>Time (UTC)</th><th>Ax</th><th>Ay</th><th>Az</th><th>GyrX</th><th>GyrY</th><th>Lat</th><th>Lon</th>
+          </tr>
+        </thead>
+        <tbody id="sensor-preview"></tbody>
+      </table>
+    </div>
+
+    <div style="padding:16px;display:flex;flex-direction:column;gap:8px">
+      <button class="btn ghost-red" onclick="deleteCurrentSession()">🗑 Delete Session</button>
+      <button class="btn muted" onclick="showScreen('screen-home')">← Back to Home</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     SCREEN 5: SETTINGS
+════════════════════════════════════════════════════════════════ -->
+<div id="screen-settings" class="screen">
+  <div class="topbar">
+    <button class="back-btn" onclick="showScreen('screen-home')">◀</button>
+    <span class="topbar-title">Settings</span>
+  </div>
+
+  <div class="scroll">
+    <div class="section-label" style="margin-top:8px">Preferences</div>
+    <div class="settings-list">
+      <div class="setting-row">
+        <span class="sr-label">GPS Tracking</span>
+        <div class="toggle on" id="toggle-gps" onclick="toggleSetting('gps')"></div>
+      </div>
+      <div class="setting-row">
+        <span class="sr-label">Motion Sensors</span>
+        <div class="toggle on" id="toggle-motion" onclick="toggleSetting('motion')"></div>
+      </div>
+      <div class="setting-row">
+        <span class="sr-label">Sensor Rate</span>
+        <span class="sr-val" id="setting-rate-label">10 Hz</span>
+      </div>
+      <div class="setting-row">
+        <span class="sr-label">GPS Accuracy</span>
+        <span class="sr-val" id="setting-gps-acc">—</span>
+      </div>
+    </div>
+
+    <div class="section-label">Storage</div>
+    <div class="settings-list">
+      <div class="setting-row">
+        <span class="sr-label">Saved Sessions</span>
+        <span class="sr-val" id="settings-session-count">0</span>
+      </div>
+      <div class="setting-row" style="cursor:pointer" onclick="clearAllSessions()">
+        <span class="sr-label" style="color:var(--red)">Clear All Sessions</span>
+        <span style="color:var(--red);font-size:18px">🗑</span>
+      </div>
+    </div>
+
+    <div class="section-label">About</div>
+    <div class="settings-list">
+      <div class="setting-row">
+        <span class="sr-label">Version</span>
+        <span class="sr-val">1.0.0 PWA</span>
+      </div>
+      <div class="setting-row">
+        <span class="sr-label">Architecture</span>
+        <span class="sr-val">Pure Web / PWA</span>
+      </div>
+      <div class="setting-row">
+        <span class="sr-label">Platform</span>
+        <span class="sr-val" id="settings-platform">—</span>
+      </div>
+    </div>
+
+    <div style="padding:16px">
+      <button class="btn amber" onclick="installPWA()" id="install-btn" style="display:none;width:100%">
+        ⬇ Add to Home Screen
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     APPLICATION LOGIC
+════════════════════════════════════════════════════════════════ */
+<script>
+'use strict';
+
+// ════════════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════════════
+const App = {
+  currentScreen: 'screen-home',
+  session: null,         // active session object
+  sessions: [],          // all saved sessions from IndexedDB
+  settings: {
+    gps: true,
+    motion: true,
+    sensorRate: 100,
+  },
+  camera: {
+    stream: null,
+    facingMode: 'environment',
+    mediaRecorder: null,
+    recordedChunks: [],
+  },
+  gps: {
+    watchId: null,
+    last: null,
+    track: [],
+  },
+  motion: {
+    intervalId: null,
+    log: [],
+    last: null,
+    permissionGranted: false,
+  },
+  timelapse: {
+    intervalId: null,
+    frameCount: 0,
+    nextTick: 0,
+  },
+  timer: {
+    intervalId: null,
+    seconds: 0,
+  },
+  db: null,
+  dbAvailable: false,
+  reviewSessionId: null,
+};
+
+// ════════════════════════════════════════════════════════════════
+// INDEXEDDB
+// ════════════════════════════════════════════════════════════════
+function initDB() {
+  // IndexedDB is unavailable on file:// origins in some Safari versions.
+  // We catch the error and fall back to in-memory storage so the app
+  // still runs — sessions just won't persist across page reloads.
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open('FieldApp', 2);
+      req.onupgradeneeded = e => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('sessions')) {
+          db.createObjectStore('sessions', { keyPath: 'id' });
+        }
+      };
+      req.onsuccess = e => {
+        App.db = e.target.result;
+        App.dbAvailable = true;
+        resolve();
+      };
+      req.onerror = () => {
+        console.warn('[FieldApp] IndexedDB unavailable — using memory storage');
+        App.dbAvailable = false;
+        resolve(); // resolve (not reject) so boot() continues
+      };
+    } catch(e) {
+      console.warn('[FieldApp] IndexedDB blocked (' + e.message + ') — using memory storage');
+      App.dbAvailable = false;
+      resolve(); // resolve so boot() continues
+    }
+  });
+}
+
+function dbPut(store, data) {
+  if (!App.dbAvailable) {
+    // Memory-only fallback: App.sessions array is the source of truth
+    return Promise.resolve(data.id);
+  }
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = App.db.transaction(store, 'readwrite');
+      tx.objectStore(store).put(data).onsuccess = e => resolve(e.target.result);
+      tx.onerror = () => reject(tx.error);
+    } catch(e) { reject(e); }
+  });
+}
+
+function dbGetAll(store) {
+  if (!App.dbAvailable) return Promise.resolve([]);
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = App.db.transaction(store, 'readonly');
+      const req = tx.objectStore(store).getAll();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror   = () => resolve([]); // resolve empty on error
+    } catch(e) { resolve([]); }
+  });
+}
+
+function dbDelete(store, key) {
+  if (!App.dbAvailable) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = App.db.transaction(store, 'readwrite');
+      tx.objectStore(store).delete(key).onsuccess = () => resolve();
+      tx.onerror = () => resolve(); // resolve silently
+    } catch(e) { resolve(); }
+  });
+}
+
+// ════════════════════════════════════════════════════════════════
+// SCREEN NAVIGATION
+// ════════════════════════════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  App.currentScreen = id;
+
+  if (id === 'screen-home') refreshHomeScreen();
+  if (id === 'screen-settings') refreshSettingsScreen();
+}
+
+// ════════════════════════════════════════════════════════════════
+// HOME SCREEN
+// ════════════════════════════════════════════════════════════════
+function refreshHomeScreen() {
+  // Clock
+  const now = new Date();
+  document.getElementById('home-datetime').textContent =
+    now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+
+  // GPS status
+  const gpsTile = document.getElementById('home-gps-status');
+  if (App.gps.last) {
+    gpsTile.textContent = `±${Math.round(App.gps.last.accuracy)}m`;
+    gpsTile.className = 'tile-val ok';
+  } else {
+    gpsTile.textContent = App.settings.gps ? 'Acquiring…' : 'Disabled';
+    gpsTile.className = 'tile-val';
+  }
+
+  // Camera status
+  const camTile = document.getElementById('home-cam-status');
+  if (App.camera.stream) {
+    camTile.textContent = 'Ready'; camTile.className = 'tile-val ok';
+  } else {
+    camTile.textContent = 'Tap New'; camTile.className = 'tile-val';
+  }
+
+  // Motion status
+  const motTile = document.getElementById('home-motion-status');
+  if (App.motion.permissionGranted) {
+    motTile.textContent = App.motion.last ? 'Active' : 'Granted';
+    motTile.className = 'tile-val ok';
+  } else {
+    motTile.textContent = 'Tap New →';
+    motTile.className = 'tile-val warn';
+  }
+
+  // Session count
+  document.getElementById('home-session-count').textContent = `${App.sessions.length} saved`;
+
+  // Sessions list
+  renderSessionsList();
+}
+
+function renderSessionsList() {
+  const list = document.getElementById('sessions-list');
+  if (!App.sessions.length) {
+    list.innerHTML = '<div class="no-sessions">[ No sessions recorded yet ]</div>';
+    return;
+  }
+  const sorted = [...App.sessions].sort((a,b) => b.startTime - a.startTime);
+  list.innerHTML = sorted.map(s => `
+    <div class="session-row" onclick="openReview('${s.id}')">
+      <span class="sr-icon">${modeIcon(s.mode)}</span>
+      <div class="sr-info">
+        <div class="sr-name">${esc(s.name)}</div>
+        <div class="sr-meta">${fmtDate(s.startTime)} · ${s.captureCount} captures · ${s.sensorLog.length} sensor pts</div>
+      </div>
+      <span class="sr-arrow">›</span>
+    </div>
+  `).join('');
+}
+
+function modeIcon(mode) {
+  return { photo:'📷', video:'📹', timelapse:'⏱' }[mode] || '📷';
+}
+
+// ════════════════════════════════════════════════════════════════
+// PERMISSIONS
+// ════════════════════════════════════════════════════════════════
+async function requestPermissions() {
+  let camOk = false;
+  let locOk = false;
+
+  // ── Camera ────────────────────────────────────────────────────
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    // Not a secure context — camera APIs unavailable
+    document.getElementById('ps-camera').textContent = 'Needs HTTPS';
+    document.getElementById('ps-camera').style.color = '#f5a623';
+  } else {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }, audio: false
+      });
+      stream.getTracks().forEach(t => t.stop());
+      document.getElementById('ps-camera').textContent = 'Granted ✓';
+      document.getElementById('ps-camera').classList.add('ok');
+      camOk = true;
+    } catch(e) {
+      document.getElementById('ps-camera').textContent = 'Denied ✗';
+      document.getElementById('ps-camera').style.color = '#ff4545';
+    }
+  }
+
+  // ── Location ──────────────────────────────────────────────────
+  if (App.settings.gps && navigator.geolocation) {
+    await new Promise(resolve => {
+      navigator.geolocation.getCurrentPosition(
+        () => {
+          document.getElementById('ps-location').textContent = 'Granted ✓';
+          document.getElementById('ps-location').classList.add('ok');
+          locOk = true;
+          resolve();
+        },
+        (err) => {
+          document.getElementById('ps-location').textContent =
+            err.code === 1 ? 'Denied ✗' : 'Unavailable';
+          document.getElementById('ps-location').style.color = '#ff4545';
+          resolve();
+        },
+        { timeout: 8000 }
+      );
+    });
+  } else {
+    document.getElementById('ps-location').textContent = 'Disabled';
+    locOk = true;
+  }
+
+  // ── Motion (iOS 13+ requires explicit user-gesture permission) ─
+  if (typeof DeviceMotionEvent !== 'undefined' &&
+      typeof DeviceMotionEvent.requestPermission === 'function') {
+    try {
+      const result = await DeviceMotionEvent.requestPermission();
+      App.motion.permissionGranted = (result === 'granted');
+    } catch(e) {
+      // User denied or gesture not valid — motion disabled
+      App.motion.permissionGranted = false;
+    }
+  } else {
+    // Android / desktop — no explicit permission needed
+    App.motion.permissionGranted = true;
+  }
+
+  // ── Also request DeviceOrientationEvent permission (iOS 13+) ──
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      await DeviceOrientationEvent.requestPermission();
+    } catch(e) {}
+  }
+
+  // ── Save grant status & dismiss wall ─────────────────────────
+  // Save even partial grants so user is not asked every time.
+  // The app handles missing permissions gracefully at runtime.
+  try {
+    localStorage.setItem('fieldapp_perms_granted', '1');
+  } catch(e) {}
+
+  // Start background GPS now that permission has been granted
+  if (locOk || App.settings.gps) startBackgroundGPS();
+
+  // Dismiss permission wall after short delay so user sees the results
+  setTimeout(() => {
+    document.getElementById('perm-wall').classList.remove('visible');
+    refreshHomeScreen();
+  }, 900);
+}
+
+// ════════════════════════════════════════════════════════════════
+// SESSION SETUP
+// ════════════════════════════════════════════════════════════════
+let selectedMode = 'photo';
+
+function selectMode(mode) {
+  selectedMode = mode;
+  document.querySelectorAll('.mode-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.mode === mode);
+  });
+  const tlOpts = document.getElementById('timelapse-options');
+  tlOpts.classList.toggle('visible', mode === 'timelapse');
+}
+
+async function startSession() {
+  const _now  = new Date();
+  const _pad  = n => String(n).padStart(2,'0');
+  const _stamp = `${_now.getFullYear()}${_pad(_now.getMonth()+1)}${_pad(_now.getDate())}_${_pad(_now.getHours())}${_pad(_now.getMinutes())}`;
+  const name = document.getElementById('setup-name').value.trim() ||
+               `Field_${_stamp}`;
+  const rate = parseInt(document.getElementById('setup-rate').value);
+  const interval = parseInt(document.getElementById('setup-interval').value);
+  const notes = document.getElementById('setup-notes').value.trim();
+
+  App.settings.sensorRate = rate;
+
+  App.session = {
+    id: 'ses_' + Date.now(),
+    name,
+    mode: selectedMode,
+    notes,
+    startTime: Date.now(),
+    endTime: null,
+    interval,
+    captureCount: 0,
+    sensorLog: [],
+    gpsTrack: [],
+    annotations: [],
+    device: navigator.userAgent,
+    appVersion: '1.0.0',
+  };
+
+  App.motion.log = [];
+  App.gps.track  = [];
+  App.timelapse.frameCount = 0;
+
+  // Start camera
+  await startCamera();
+
+  // Start GPS
+  if (App.settings.gps) startGPS();
+
+  // Start motion
+  if (App.settings.motion) startMotion();
+
+  // Start session timer
+  App.timer.seconds = 0;
+  App.timer.intervalId = setInterval(tickTimer, 1000);
+
+  // Update HUD
+  document.getElementById('mode-badge').textContent = selectedMode.toUpperCase();
+  document.getElementById('capture-count').textContent = '0 captured';
+
+  const captureBtn = document.getElementById('capture-btn');
+  if (selectedMode === 'video') {
+    captureBtn.textContent = '⏺';
+    captureBtn.classList.remove('recording');
+  } else if (selectedMode === 'timelapse') {
+    captureBtn.textContent = '▶';
+    document.getElementById('tl-progress').classList.add('visible');
+    document.getElementById('tl-count').textContent = '0 frames';
+  } else {
+    captureBtn.textContent = '📷';
+  }
+
+  showScreen('screen-session');
+}
+
+// ════════════════════════════════════════════════════════════════
+// CAMERA
+// ════════════════════════════════════════════════════════════════
+async function startCamera() {
+  // getUserMedia requires a secure context (https:// or localhost).
+  // file:// will have navigator.mediaDevices === undefined.
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showSecureContextWarning();
+    return;
+  }
+  try {
+    if (App.camera.stream) stopCamera();
+    const constraints = {
+      video: {
+        facingMode: App.camera.facingMode,
+        width:  { ideal: 1920 },
+        height: { ideal: 1080 },
+      },
+      audio: App.session?.mode === 'video',
+    };
+    App.camera.stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const video = document.getElementById('camera-video');
+    video.srcObject = App.camera.stream;
+    await video.play();
+  } catch(e) {
+    const msg = e.name === 'NotAllowedError'
+      ? 'Camera permission denied. Go to Settings → Safari → Camera and allow access.'
+      : e.name === 'NotFoundError'
+      ? 'No camera found on this device.'
+      : 'Camera error: ' + e.message;
+    toast(msg, 4000);
+    if (App.session) { App.session = null; showScreen('screen-setup'); }
+  }
+}
+
+function showSecureContextWarning() {
+  // Show a clear in-app warning instead of crashing silently
+  const existing = document.getElementById('https-warning');
+  if (existing) return;
+  const div = document.createElement('div');
+  div.id = 'https-warning';
+  div.style.cssText = \`
+    position:fixed;inset:0;z-index:2000;
+    background:#0d0f0e;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    padding:32px;text-align:center;gap:16px;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+  \`;
+  div.innerHTML = \`
+    <div style="font-size:52px">⚠️</div>
+    <h2 style="font-size:22px;font-weight:900;letter-spacing:2px;color:#f5a623;text-transform:uppercase">
+      HTTPS Required
+    </h2>
+    <p style="color:#8fa89f;line-height:1.7;max-width:340px;font-size:15px">
+      Camera, GPS and sensors require the app to be served over
+      <strong style="color:#f5a623">HTTPS</strong> — not opened as a local file.
+    </p>
+    <div style="background:#1a2d45;border:1px solid #2a3330;border-radius:6px;
+                padding:16px;width:100%;max-width:340px;text-align:left">
+      <p style="color:#f5a623;font-size:12px;font-weight:700;
+                letter-spacing:2px;text-transform:uppercase;margin-bottom:10px">
+        Deploy in 2 minutes (free):
+      </p>
+      <p style="color:#d4dbd6;font-size:14px;line-height:1.9">
+        1. Go to <strong>netlify.com/drop</strong> in Safari<br>
+        2. Upload the <strong>FieldApp_PWA</strong> folder<br>
+        3. Open the <strong>https://…netlify.app</strong> URL<br>
+        4. Tap Share → <strong>Add to Home Screen</strong>
+      </p>
+    </div>
+    <p style="color:#5a706a;font-size:12px;max-width:320px;line-height:1.6">
+      This is a browser security requirement that cannot be bypassed.
+      All features work correctly once hosted on HTTPS.
+    </p>
+  \`;
+  document.body.appendChild(div);
+}
+
+function stopCamera() {
+  if (App.camera.stream) {
+    App.camera.stream.getTracks().forEach(t => t.stop());
+    App.camera.stream = null;
+    document.getElementById('camera-video').srcObject = null;
+  }
+}
+
+async function toggleCamera() {
+  App.camera.facingMode = App.camera.facingMode === 'environment' ? 'user' : 'environment';
+  await startCamera();
+}
+
+// ════════════════════════════════════════════════════════════════
+// CAPTURE HANDLERS
+// ════════════════════════════════════════════════════════════════
+function handleCapture() {
+  if (!App.session) return;
+  const mode = App.session.mode;
+  if (mode === 'photo')     capturePhoto();
+  else if (mode === 'video') toggleVideoRecording();
+  else if (mode === 'timelapse') toggleTimelapse();
+}
+
+// ── Photo ──────────────────────────────────────────────────────
+function capturePhoto() {
+  const video  = document.getElementById('camera-video');
+  const canvas = document.createElement('canvas');
+  canvas.width  = video.videoWidth  || 1280;
+  canvas.height = video.videoHeight || 720;
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  // Flash
+  const flash = document.getElementById('flash');
+  flash.classList.add('show');
+  setTimeout(() => flash.classList.remove('show'), 150);
+
+  // Save
+  canvas.toBlob(blob => {
+    if (!blob) return;
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href  = url;
+    link.download = `FieldApp_${App.session.id}_${App.session.captureCount + 1}.jpg`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, 'image/jpeg', 0.92);
+
+  App.session.captureCount++;
+  // Log the capture event as an annotation with GPS
+  if (App.session) {
+    const _cts = Date.now();
+    App.session.annotations.push({
+      timestamp: _cts,
+      timestampISO: new Date(_cts).toISOString(),
+      label: `Photo #${App.session.captureCount} captured`,
+      lat:  App.gps.last?.lat ?? null,
+      lon:  App.gps.last?.lon ?? null,
+      altitude: App.gps.last?.altitude ?? null,
+      type: 'photo_capture',
+    });
+  }
+  document.getElementById('capture-count').textContent =
+    `${App.session.captureCount} captured`;
+  toast('Photo saved to Downloads');
+}
+
+// ── Video recording ────────────────────────────────────────────
+function toggleVideoRecording() {
+  const btn = document.getElementById('capture-btn');
+  const badge = document.getElementById('rec-badge');
+
+  if (!App.camera.mediaRecorder || App.camera.mediaRecorder.state === 'inactive') {
+    // Start recording
+    App.camera.recordedChunks = [];
+    const mimeType = getSupportedMimeType();
+    const options  = mimeType ? { mimeType } : {};
+    try {
+      App.camera.mediaRecorder = new MediaRecorder(App.camera.stream, options);
+    } catch(e) {
+      toast('Video recording not supported on this browser');
+      return;
+    }
+    App.camera.mediaRecorder.ondataavailable = e => {
+      if (e.data && e.data.size > 0) App.camera.recordedChunks.push(e.data);
+    };
+    App.camera.mediaRecorder.onstop = saveVideo;
+    App.camera.mediaRecorder.start(1000);
+
+    btn.textContent = '⏹';
+    btn.classList.add('recording');
+    badge.style.display = 'flex';
+    toast('Recording started');
+  } else {
+    // Stop recording
+    App.camera.mediaRecorder.stop();
+    btn.textContent = '⏺';
+    btn.classList.remove('recording');
+    badge.style.display = 'none';
+    App.session.captureCount++;
+    document.getElementById('capture-count').textContent =
+      `${App.session.captureCount} recorded`;
+  }
+}
+
+function getSupportedMimeType() {
+  const types = [
+    'video/mp4; codecs="avc1.42E01E"',
+    'video/mp4',
+    'video/webm; codecs="vp9"',
+    'video/webm',
+  ];
+  return types.find(t => MediaRecorder.isTypeSupported(t)) || '';
+}
+
+function saveVideo() {
+  if (!App.camera.recordedChunks.length) return;
+  const mimeType = getSupportedMimeType() || 'video/mp4';
+  const ext      = mimeType.includes('webm') ? 'webm' : 'mp4';
+  const blob     = new Blob(App.camera.recordedChunks, { type: mimeType });
+  const url      = URL.createObjectURL(blob);
+  const link     = document.createElement('a');
+  link.href      = url;
+  link.download  = `FieldApp_${App.session.id}_video.${ext}`;
+  link.click();
+  URL.revokeObjectURL(url);
+  toast('Video saved to Downloads');
+}
+
+// ── Time-lapse ─────────────────────────────────────────────────
+function toggleTimelapse() {
+  const btn = document.getElementById('capture-btn');
+  if (App.timelapse.intervalId) {
+    // Stop
+    clearInterval(App.timelapse.intervalId);
+    App.timelapse.intervalId = null;
+    btn.textContent = '▶';
+    document.getElementById('rec-badge').style.display = 'none';
+    toast(`Time-lapse stopped — ${App.timelapse.frameCount} frames captured`);
+  } else {
+    // Start
+    App.timelapse.frameCount = 0;
+    const ms = App.session.interval || 5000;
+    App.timelapse.nextTick = Date.now() + ms;
+    captureTimelapsFrame();
+    App.timelapse.intervalId = setInterval(() => {
+      App.timelapse.nextTick = Date.now() + ms;
+      captureTimelapsFrame();
+    }, ms);
+    btn.textContent = '⏹';
+    document.getElementById('rec-badge').style.display = 'flex';
+    // Animate progress bar
+    animateTLBar(ms);
+    toast('Time-lapse started');
+  }
+}
+
+function captureTimelapsFrame() {
+  const video  = document.getElementById('camera-video');
+  const canvas = document.createElement('canvas');
+  canvas.width  = video.videoWidth  || 1280;
+  canvas.height = video.videoHeight || 720;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+
+  canvas.toBlob(blob => {
+    if (!blob) return;
+    App.timelapse.frameCount++;
+    App.session.captureCount = App.timelapse.frameCount;
+    document.getElementById('tl-count').textContent = `${App.timelapse.frameCount} frames`;
+    document.getElementById('capture-count').textContent =
+      `${App.timelapse.frameCount} frames`;
+
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href  = url;
+    link.download = `FieldApp_${App.session.id}_tl_${String(App.timelapse.frameCount).padStart(4,'0')}.jpg`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }, 'image/jpeg', 0.88);
+}
+
+function animateTLBar(ms) {
+  const bar = document.getElementById('tl-bar');
+  if (!App.timelapse.intervalId && !App.timelapse.frameCount) return;
+  const start = Date.now();
+  const anim = () => {
+    if (!App.timelapse.intervalId) { bar.style.width = '0%'; return; }
+    const pct = Math.min(100, ((Date.now() - start) % ms) / ms * 100);
+    bar.style.width = pct + '%';
+    requestAnimationFrame(anim);
+  };
+  requestAnimationFrame(anim);
+}
+
+// ════════════════════════════════════════════════════════════════
+// GPS
+// ════════════════════════════════════════════════════════════════
+function startGPS() {
+  if (!navigator.geolocation) return;
+  App.gps.watchId = navigator.geolocation.watchPosition(
+    pos => {
+      const pt = {
+        lat:              pos.coords.latitude,
+        lon:              pos.coords.longitude,
+        altitude:         pos.coords.altitude,
+        accuracy:         pos.coords.accuracy,
+        altitudeAccuracy: pos.coords.altitudeAccuracy,
+        speed:            pos.coords.speed,
+        heading:          pos.coords.heading,
+        timestamp:        pos.timestamp,
+        timestampISO:     new Date(pos.timestamp).toISOString(),
+      };
+      App.gps.last = pt;
+      if (App.session) {
+        App.session.gpsTrack.push(pt);
+        App.gps.track.push(pt);
+      }
+      updateGPSHUD(pt);
+    },
+    err => { document.getElementById('gps-badge').textContent = '📍 Unavailable'; },
+    { enableHighAccuracy: true, maximumAge: 2000 }
+  );
+}
+
+function stopGPS() {
+  if (App.gps.watchId !== null) {
+    navigator.geolocation.clearWatch(App.gps.watchId);
+    App.gps.watchId = null;
+  }
+}
+
+function updateGPSHUD(pt) {
+  document.getElementById('gps-badge').textContent =
+    `📍 ±${Math.round(pt.accuracy)}m`;
+  document.getElementById('gps-detail').textContent =
+    `${pt.lat.toFixed(5)}, ${pt.lon.toFixed(5)}` +
+    (pt.altitude != null ? `  ALT ${Math.round(pt.altitude)}m` : '');
+  document.getElementById('setting-gps-acc').textContent = `±${Math.round(pt.accuracy)}m`;
+}
+
+// ════════════════════════════════════════════════════════════════
+// MOTION SENSORS
+// ════════════════════════════════════════════════════════════════
+function startMotion() {
+  // On iOS 13+, DeviceMotionEvent.requestPermission must have been called
+  // with a user gesture before this point. permissionGranted is set by
+  // requestPermissions() in the permission wall flow.
+  if (!App.motion.permissionGranted) {
+    console.log('[Motion] Permission not granted — sensors disabled');
+    return;
+  }
+
+  // Attach event listeners — these fire continuously once attached
+  window.addEventListener('devicemotion',      onDeviceMotion,      { passive: true });
+  window.addEventListener('deviceorientation', onDeviceOrientation, { passive: true });
+
+  // Log sensor data to session at the configured sample rate
+  App.motion.intervalId = setInterval(() => {
+    if (!App.session || !App.motion.last) return;
+    const _ts = Date.now();
+    App.session.sensorLog.push({
+      ...App.motion.last,
+      timestamp:    _ts,
+      timestampISO: new Date(_ts).toISOString(),
+      lat:          App.gps.last?.lat      ?? null,
+      lon:          App.gps.last?.lon      ?? null,
+      altitude:     App.gps.last?.altitude ?? null,
+      gpsAccuracy:  App.gps.last?.accuracy ?? null,
+    });
+  }, App.settings.sensorRate);
+
+  console.log('[Motion] Sensors started at', App.settings.sensorRate, 'ms interval');
+}
+
+function stopMotion() {
+  if (App.motion.intervalId) {
+    clearInterval(App.motion.intervalId);
+    App.motion.intervalId = null;
+  }
+  window.removeEventListener('devicemotion',      onDeviceMotion);
+  window.removeEventListener('deviceorientation', onDeviceOrientation);
+  console.log('[Motion] Sensors stopped');
+}
+
+
+
+function onDeviceMotion(e) {
+  const a  = e.accelerationIncludingGravity || {};
+  const ag = e.acceleration || {};
+  const r  = e.rotationRate || {};
+  App.motion.last = {
+    ...(App.motion.last || {}),
+    ax: n(a.x), ay: n(a.y), az: n(a.z),
+    ax_ng: n(ag.x), ay_ng: n(ag.y), az_ng: n(ag.z),
+    gyrX: n(r.alpha), gyrY: n(r.beta), gyrZ: n(r.gamma),
+    interval: e.interval,
+  };
+  document.getElementById('s-ax').textContent = n(a.x, 2);
+  document.getElementById('s-ay').textContent = n(a.y, 2);
+  document.getElementById('s-az').textContent = n(a.z, 2);
+  document.getElementById('s-gyrx').textContent = n(r.alpha, 1);
+  document.getElementById('s-gyry').textContent = n(r.beta,  1);
+  document.getElementById('s-gyrz').textContent = n(r.gamma, 1);
+}
+
+function onDeviceOrientation(e) {
+  App.motion.last = {
+    ...(App.motion.last || {}),
+    pitch:   n(e.beta),
+    roll:    n(e.gamma),
+    heading: n(e.alpha),
+  };
+  document.getElementById('s-pitch').textContent = n(e.beta,  1) + '°';
+  document.getElementById('s-roll').textContent  = n(e.gamma, 1) + '°';
+  document.getElementById('s-head').textContent  = n(e.alpha, 0) + '°';
+}
+
+function n(v, dec=2) {
+  return v == null ? '—' : parseFloat(v.toFixed(dec));
+}
+
+// ════════════════════════════════════════════════════════════════
+// SESSION TIMER
+// ════════════════════════════════════════════════════════════════
+function tickTimer() {
+  App.timer.seconds++;
+  const m = String(Math.floor(App.timer.seconds / 60)).padStart(2,'0');
+  const s = String(App.timer.seconds % 60).padStart(2,'0');
+  document.getElementById('session-timer').textContent = `${m}:${s}`;
+}
+
+// ════════════════════════════════════════════════════════════════
+// END SESSION
+// ════════════════════════════════════════════════════════════════
+
+function addAnnotation(label) {
+  if (!App.session) return;
+  const ts = Date.now();
+  const ann = {
+    timestamp: ts,
+    timestampISO: new Date(ts).toISOString(),
+    label,
+    lat:      App.gps.last?.lat ?? null,
+    lon:      App.gps.last?.lon ?? null,
+    altitude: App.gps.last?.altitude ?? null,
+    sensorSnapshot: App.motion.last ? { ...App.motion.last } : null,
+  };
+  App.session.annotations.push(ann);
+  // Show in HUD log
+  const log = document.getElementById('annot-log');
+  log.style.display = 'block';
+  const entry = document.createElement('div');
+  const time = new Date(ts).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false});
+  entry.textContent = `[${time}] ${label}`;
+  log.insertBefore(entry, log.firstChild);
+  while (log.children.length > 3) log.removeChild(log.lastChild);
+  toast(`Annotated: ${label}`);
+}
+
+function promptAnnotation() {
+  const label = prompt('Enter observation note:');
+  if (label && label.trim()) addAnnotation(label.trim());
+}
+
+async function endSession() {
+  if (!App.session) return;
+
+  // Stop everything
+  clearInterval(App.timer.intervalId);
+  stopMotion();
+  stopGPS();
+  if (App.timelapse.intervalId) {
+    clearInterval(App.timelapse.intervalId);
+    App.timelapse.intervalId = null;
+  }
+  if (App.camera.mediaRecorder?.state !== 'inactive') {
+    App.camera.mediaRecorder?.stop();
+  }
+  stopCamera();
+
+  // Finalise session
+  App.session.endTime = Date.now();
+  App.session.duration = App.timer.seconds;
+  const saved = { ...App.session };
+
+  // Save to IndexedDB
+  await dbPut('sessions', saved);
+  App.sessions = await dbGetAll('sessions');
+
+  // Show review
+  App.reviewSessionId = saved.id;
+  populateReview(saved);
+  showScreen('screen-review');
+  toast('Session saved successfully');
+}
+
+// ════════════════════════════════════════════════════════════════
+// REVIEW SCREEN
+// ════════════════════════════════════════════════════════════════
+function openReview(id) {
+  const s = App.sessions.find(x => x.id === id);
+  if (!s) return;
+  App.reviewSessionId = id;
+  populateReview(s);
+  showScreen('screen-review');
+}
+
+function populateReview(s) {
+  document.getElementById('review-name').textContent = s.name;
+  document.getElementById('review-date').textContent = fmtDate(s.startTime);
+  document.getElementById('rv-duration').textContent = fmtDuration(s.duration || 0);
+  document.getElementById('rv-captures').textContent = s.captureCount;
+  document.getElementById('rv-gps').textContent      = s.gpsTrack.length;
+  document.getElementById('rv-sensors').textContent  = s.sensorLog.length;
+  document.getElementById('rv-annotations').textContent = (s.annotations || []).length;
+
+  // Sensor preview table
+  const tbody = document.getElementById('sensor-preview');
+  const preview = s.sensorLog.slice(-20);
+  tbody.innerHTML = preview.length ? preview.map(r => `
+    <tr>
+      <td>${new Date(r.timestamp).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})}</td>
+      <td class="val">${r.ax ?? '—'}</td>
+      <td class="val">${r.ay ?? '—'}</td>
+      <td class="val">${r.az ?? '—'}</td>
+      <td>${r.lat != null ? r.lat.toFixed(4) : '—'}</td>
+      <td>${r.lon != null ? r.lon.toFixed(4) : '—'}</td>
+    </tr>
+  `).join('') : '<tr><td colspan="8" style="text-align:center;padding:16px;color:var(--text-dim)">No sensor data</td></tr>';
+}
+
+// ════════════════════════════════════════════════════════════════
+// EXPORT
+// ════════════════════════════════════════════════════════════════
+function getReviewSession() {
+  return App.sessions.find(x => x.id === App.reviewSessionId);
+}
+
+function downloadBlob(content, filename, type) {
+  const blob = new Blob([content], { type });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportJSON() {
+  const s = getReviewSession();
+  if (!s) return;
+  const data = {
+    session: { id: s.id, name: s.name, mode: s.mode, startTime: s.startTime,
+               endTime: s.endTime, duration: s.duration, notes: s.notes,
+               captureCount: s.captureCount, device: s.device },
+    sensorLog:   s.sensorLog,
+    gpsTrack:    s.gpsTrack,
+    annotations: s.annotations || [],
+  };
+  downloadBlob(JSON.stringify(data, null, 2), `${s.id}_sensor_log.json`, 'application/json');
+  toast('JSON exported');
+}
+
+function exportCSV() {
+  const s = getReviewSession();
+  if (!s || !s.sensorLog.length) { toast('No sensor data to export'); return; }
+  const headers = ['timestamp','timestampISO','ax','ay','az','ax_ng','ay_ng','az_ng','gyrX','gyrY','gyrZ','pitch','roll','heading','lat','lon','altitude','gpsAccuracy','altitudeAccuracy','speed'];
+  const rows = s.sensorLog.map(r => {
+    return [
+      r.timestamp,
+      r.timestampISO ?? '',
+      r.ax ?? '', r.ay ?? '', r.az ?? '',
+      r.ax_ng ?? '', r.ay_ng ?? '', r.az_ng ?? '',
+      r.gyrX ?? '', r.gyrY ?? '', r.gyrZ ?? '',
+      r.pitch ?? '', r.roll ?? '', r.heading ?? '',
+      r.lat ?? '', r.lon ?? '', r.altitude ?? '',
+      r.gpsAccuracy ?? '', r.altitudeAccuracy ?? '', r.speed ?? '',
+    ].join(',');
+  });
+  downloadBlob([headers.join(','), ...rows].join('\n'), `${s.id}_sensor_log.csv`, 'text/csv');
+  toast('CSV exported');
+}
+
+function exportGPSTrack() {
+  const s = getReviewSession();
+  if (!s || !s.gpsTrack.length) { toast('No GPS data to export'); return; }
+  const geojson = {
+    type: 'FeatureCollection',
+    features: [{
+      type: 'Feature',
+      geometry: {
+        type: 'LineString',
+        coordinates: s.gpsTrack.map(p => [p.lon, p.lat, p.altitude || 0]),
+      },
+      properties: { sessionId: s.id, name: s.name, startTime: s.startTime },
+    }],
+  };
+  downloadBlob(JSON.stringify(geojson, null, 2), `${s.id}_gps_track.geojson`, 'application/json');
+  toast('GeoJSON exported');
+}
+
+function exportMetadata() {
+  const s = getReviewSession();
+  if (!s) return;
+  const meta = {
+    id: s.id, name: s.name, mode: s.mode,
+    startTime: new Date(s.startTime).toISOString(),
+    endTime:   s.endTime ? new Date(s.endTime).toISOString() : null,
+    duration:  s.duration,
+    notes:     s.notes,
+    captureCount: s.captureCount,
+    sensorPoints: s.sensorLog.length,
+    gpsPoints:    s.gpsTrack.length,
+    device: s.device, appVersion: s.appVersion,
+  };
+  downloadBlob(JSON.stringify(meta, null, 2), `${s.id}_metadata.json`, 'application/json');
+  toast('Metadata exported');
+}
+
+// ════════════════════════════════════════════════════════════════
+// DELETE SESSION
+// ════════════════════════════════════════════════════════════════
+
+function exportAnnotations() {
+  const s = getReviewSession();
+  if (!s) return;
+  const anns = s.annotations || [];
+  if (!anns.length) { toast('No annotations recorded'); return; }
+  const headers = ['timestamp','timestampISO','label','lat','lon','altitude'];
+  const rows = anns.map(a => [
+    a.timestamp, a.timestampISO ?? '',
+    '"' + (a.label || '').replace(/"/g, '""') + '"',
+    a.lat ?? '', a.lon ?? '', a.altitude ?? '',
+  ].join(','));
+  downloadBlob([headers.join(','), ...rows].join('\n'),
+    `${s.id}_annotations.csv`, 'text/csv');
+  toast('Annotations exported');
+}
+
+function exportBundle() {
+  const s = getReviewSession();
+  if (!s) return;
+  const bundle = {
+    schemaVersion: '1.0',
+    exportedAt: new Date().toISOString(),
+    session: {
+      id: s.id, name: s.name, mode: s.mode,
+      startTime: new Date(s.startTime).toISOString(),
+      endTime: s.endTime ? new Date(s.endTime).toISOString() : null,
+      durationSeconds: s.duration || 0,
+      notes: s.notes || '',
+      captureCount: s.captureCount,
+      device: s.device, appVersion: s.appVersion,
+    },
+    sensorLog:   s.sensorLog,
+    gpsTrack:    s.gpsTrack,
+    annotations: s.annotations || [],
+    stats: {
+      sensorPoints:    s.sensorLog.length,
+      gpsPoints:       s.gpsTrack.length,
+      annotationCount: (s.annotations || []).length,
+    },
+  };
+  downloadBlob(JSON.stringify(bundle, null, 2),
+    `${s.id}_full_bundle.json`, 'application/json');
+  toast('Full bundle exported');
+}
+
+async function deleteCurrentSession() {
+  if (!App.reviewSessionId) return;
+  await dbDelete('sessions', App.reviewSessionId);
+  App.sessions = await dbGetAll('sessions');
+  App.reviewSessionId = null;
+  showScreen('screen-home');
+  toast('Session deleted');
+}
+
+async function clearAllSessions() {
+  for (const s of App.sessions) await dbDelete('sessions', s.id);
+  App.sessions = [];
+  document.getElementById('settings-session-count').textContent = '0';
+  toast('All sessions cleared');
+}
+
+// ════════════════════════════════════════════════════════════════
+// SETTINGS SCREEN
+// ════════════════════════════════════════════════════════════════
+function refreshSettingsScreen() {
+  document.getElementById('settings-session-count').textContent = App.sessions.length;
+  document.getElementById('settings-platform').textContent =
+    /iPad/.test(navigator.userAgent) ? 'iPad' :
+    /iPhone/.test(navigator.userAgent) ? 'iPhone' : 'Browser';
+}
+
+function toggleSetting(key) {
+  App.settings[key] = !App.settings[key];
+  document.getElementById('toggle-' + key).classList.toggle('on', App.settings[key]);
+}
+
+// ════════════════════════════════════════════════════════════════
+// UTILITIES
+// ════════════════════════════════════════════════════════════════
+function toast(msg, dur = 2400) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), dur);
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fmtDate(ts) {
+  return new Date(ts).toLocaleString([], {
+    month:'short', day:'numeric',
+    hour:'2-digit', minute:'2-digit', hour12: false,
+  });
+}
+
+function fmtDuration(sec) {
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return `${m}m ${s}s`;
+}
+
+// ════════════════════════════════════════════════════════════════
+// PWA — INSTALL PROMPT
+// ════════════════════════════════════════════════════════════════
+let deferredInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.getElementById('install-btn').style.display = 'flex';
+});
+
+function installPWA() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then(() => {
+      deferredInstallPrompt = null;
+      document.getElementById('install-btn').style.display = 'none';
+    });
+  } else {
+    toast('In Safari: tap Share → Add to Home Screen');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// CLOCK UPDATE
+// ════════════════════════════════════════════════════════════════
+setInterval(() => {
+  if (App.currentScreen === 'screen-home') {
+    const now = new Date();
+    document.getElementById('home-datetime').textContent =
+      now.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit', hour12:false });
+  }
+}, 10000);
+
+// ════════════════════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════════════════════
+async function boot() {
+  await initDB();
+  App.sessions = await dbGetAll('sessions');
+
+  document.getElementById('settings-platform').textContent =
+    /iPad/.test(navigator.userAgent) ? 'iPad' :
+    /iPhone/.test(navigator.userAgent) ? 'iPhone' : 'Browser';
+
+  // Check if running in standalone mode (installed PWA)
+  const standalone = window.navigator.standalone ||
+                     window.matchMedia('(display-mode: standalone)').matches;
+
+  // navigator.permissions.query is NOT supported in Safari iOS for camera.
+  // Use localStorage flag instead to remember if user has granted permissions.
+  // localStorage works on file:// and https:// alike.
+  let permissionsGranted = false;
+  try {
+    permissionsGranted = localStorage.getItem('fieldapp_perms_granted') === '1';
+  } catch(e) {
+    // localStorage blocked (private browsing) — treat as first run
+    permissionsGranted = false;
+  }
+
+  // On iOS 13+, DeviceMotionEvent.requestPermission is a function.
+  // We cannot pre-grant it here — it needs a user gesture.
+  // We set the flag after the user taps Grant Permissions.
+
+  // Show permission wall on first run or if not yet granted
+  if (!permissionsGranted) {
+    document.getElementById('perm-wall').classList.add('visible');
+  } else {
+    App.motion.permissionGranted = true;
+    startBackgroundGPS();
+  }
+
+  // Show HTTPS banner if running as a local file
+  if (location.protocol === 'file:') {
+    const banner = document.getElementById('https-banner');
+    if (banner) banner.style.display = 'block';
+  }
+
+  // Show HTTPS warning overlay if mediaDevices is unavailable
+  if (!navigator.mediaDevices) {
+    // Don't show blocking overlay on boot — only show when user tries to use camera
+    // The banner above and the tile status are sufficient
+  }
+
+  refreshHomeScreen();
+}
+
+function startBackgroundGPS() {
+  if (!App.settings.gps || !navigator.geolocation) return;
+  navigator.geolocation.watchPosition(
+    pos => {
+      App.gps.last = {
+        lat: pos.coords.latitude, lon: pos.coords.longitude,
+        altitude: pos.coords.altitude, accuracy: pos.coords.accuracy,
+        timestamp: pos.timestamp,
+      };
+      if (App.currentScreen === 'screen-home') refreshHomeScreen();
+    },
+    () => {},
+    { enableHighAccuracy: true, maximumAge: 5000 }
+  );
+}
+
+boot();
+
+// ── Service Worker registration ──────────────────────────────────
+// Service workers require HTTPS (or localhost) to register.
+// On file:// this will fail silently — that is expected and harmless.
+// Once hosted on HTTPS (GitHub Pages / Netlify), the SW activates
+// automatically and caches the app for full offline use.
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/fieldapp/sw.js')
+      .then(() => console.log('[FieldApp] Service worker registered — offline cache active'))
+      .catch(e => console.warn('[FieldApp] SW registration failed:', e));
+  });
+} else if (location.protocol === 'file:') {
+  console.log('[FieldApp] Service worker skipped on file:// — host on HTTPS for offline support');
+}
+</script>
+</body>
+</html>
